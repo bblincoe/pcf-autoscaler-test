@@ -11,7 +11,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 public class FibCpuTestApplicationTests {
 
 	@Test
-	@Ignore // Our cpu abuse is on start up of spring context so don't remove this
 	public void contextLoads() {
 	}
 
