@@ -15,7 +15,7 @@ public class PCFAutoscalerTestApplication {
 	}
 	
 	@Bean
-	public FibCPUBoundAlgo fib(@Value("${cpu.algo.reset:40}") int cpuAlgoReset){
+	public FibCPUBoundAlgo fib(@Value("${cpu.algo.reset:5}") int cpuAlgoReset){
 			return new FibCPUBoundAlgo(cpuAlgoReset);
 	}
 }
