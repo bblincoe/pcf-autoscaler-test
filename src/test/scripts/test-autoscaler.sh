@@ -6,7 +6,9 @@ echo "Please check you your api setting is correct.."
 cf target
 
 : "${WORKSPACE:?Need to set WORKSPACE non-empty which contains the app ${app_name}}"
+: "${CF_HOST:?Need to set CF_HOST non-empty for the curl call}"
 
+cf_host=$CF_HOST
 app_name=pcf-autoscaler-test
 service_instance_name=pcf-autoscaler-test
 autoscaler_home="${WORKSPACE}/${app_name}"
@@ -22,10 +24,7 @@ read -p "App built. Ready to cf push (y/n)?" choice
        exit 1
    fi
 
-# In actual tests we might be assuming cf push already run on spring boot app
-cf push -p ${autoscaler_home}/target/${app_name}-${project_version}.jar $app_name -i 1 --no-start
-cf unset-env ${app_name} CPU_ALGO_RESET
-cf start $app_name
+cf push -p ${autoscaler_home}/target/${app_name}-${project_version}.jar $app_name -i 1
 
 #cf app "pcf-autoscaler-test"
 cf app $app_name
@@ -39,7 +38,7 @@ cf create-service app-autoscaler gold $service_instance_name
 # bind the service
 cf bind-service $app_name $service_instance_name
 
-echo "Ensure the autoscale instance bound to your app is unpaused. Also set min instances to 1 and high cpu threshold to 50%. This is done via the OpsMan GUI."
+echo "Ensure the autoscale instance bound to your app is unpaused. Also set min instances to 1 and high cpu threshold to something like 50%. This is done via the Apps Manager GUI."
 read -p "Have you configured your autoscaler instance as described above (y/n)?" choice
    if [ "$choice" != "y" ]; then
        exit 1
@@ -48,23 +47,13 @@ read -p "Have you configured your autoscaler instance as described above (y/n)?"
 # manually unpause the service for the moment
 # To automate using a REST call via POST - See scripts README.MD for an undocumented approach
 
-# cpu.algo.reset property - defaults to 5 so needs to be increased for autoscaling to kick in
-cf set-env $app_name CPU_ALGO_RESET 40
-cf restart $app_name
-
 echo "Current event logs.."
 cf events $app_name | grep 'instances:'
 
+curl -k -X POST https://${app_name}.${cf_host}/cpu
+
 echo "Give the autoscaler a few moments to autoscale..(The gold service monitors app load every 30 seconds)"
 sleep 50
-
-# TODO: Investigate why this does not work as expected..
-#autoscaled_output=$(echo cf events $app_name | grep 'instances: 2')
-#if [ -z "$autoscaled_output" ]; then
-#	echo "Test failed. No autoscaling occurred. Did you definitely unpause the autoscale instance?"
-#	exit 1
-#fi
-#echo $autoscaled_output
 
 # TODO: automated assert that it increases to 2 instances
 # custom actuator info page?
@@ -80,39 +69,6 @@ sleep 50
 
 # So could do cf logs autoscale | grep ExpectedInstanceCount:2 RunningInstanceCount:2
 
-
-
-while [ "$continueChoice" != "y" ]; do
-	cf events $app_name | grep 'instances'
-	echo "So was the last event a scale up????? Check the event logs above"
-	read -p "Ready to continue with a scale down test (y/n)?" continueChoice
-done
-
-#read -p "Ready to continue with a scale down test (y/n)?" continueChoice
- #  if [ "$continueChoice" != "y" ]; then
-  #     exit 1
-   #fi
-echo "Let's see if we can autoscale down..."
-
-# TODO: Consider using spring cloud refresh scope to avoid having to restart the app
-
-# reduce the cpu footprint...
-# Won't work without changing autoscale min to 1 otherwise it won't scale back down from 2
-# See http://docs.pivotal.io/pivotalcf/1-7/customizing/autoscale-configuration.html
-cf set-env $app_name CPU_ALGO_RESET 2
-cf restart $app_name
-
-echo "Give the autoscaler a few moments to autoscale..(The gold service monitors app load every 30 seconds)"
-sleep 50
-
-# assert that it decreases again to 1 instance
-# cf events
-cf events $app_name | grep 'instances: 1'
-# or
-# cf logs autoscale | grep ExpectedInstanceCount:1 RunningInstanceCount:1
-
 echo
-echo "We are done!"
-echo
-echo "For clarity here are all the scaling events.."
+echo "So was the last event a scale up????? Check the event logs.."
 cf events $app_name | grep 'instances:'

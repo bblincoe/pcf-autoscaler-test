@@ -17,7 +17,6 @@ public class CPUAlgoController {
 	@RequestMapping(value = "/cpu", method = RequestMethod.POST)
 	public CPUState controlCpu(){
 		cpuAlgo.doAsyncFib();
-		System.out.println("Fired and forgot!");
 		return new CPUState(true);
 	}
 
