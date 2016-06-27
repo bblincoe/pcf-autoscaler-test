@@ -6,7 +6,7 @@ It assumes you are logged in via the cf command line
 
 # Future enhancements
 
-The autoscale service needs to be manually unpaused via the OpsMan gui, which in turn does this via an undocumented API
+The autoscale service needs to be manually unpaused via the App Manager gui, which in turn does this via an undocumented API
 
 This means we can leverage the same API to automate it. Some details about the API follow which were established by interrogating via browser debug tools
 
