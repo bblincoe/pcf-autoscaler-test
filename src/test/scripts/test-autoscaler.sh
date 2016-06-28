@@ -6,9 +6,11 @@ echo "Please check you your api setting is correct.."
 cf target
 
 : "${WORKSPACE:?Need to set WORKSPACE non-empty which contains the app ${app_name}}"
-: "${CF_HOST:?Need to set CF_HOST non-empty for the curl call}"
 
-cf_host=$CF_HOST
+prefix="API endpoint: https://api."
+api_out=$(cf api)
+tmp=${api_out#$prefix} # prefix removal
+cf_host=${tmp% * * *} # suffix removal assuming structure like " (API version: 2.54.0)"
 app_name=pcf-autoscaler-test
 service_instance_name=pcf-autoscaler-test
 autoscaler_home="${WORKSPACE}/${app_name}"
@@ -49,11 +51,12 @@ read -p "Have you configured your autoscaler instance as described above (y/n)?"
 
 echo "Current event logs.."
 cf events $app_name | grep 'instances:'
-
+echo "Invoking CPU endpoint to increase CPU load"
 curl -k -X POST https://${app_name}.${cf_host}/cpu
+echo
 
 echo "Give the autoscaler a few moments to autoscale..(The gold service monitors app load every 30 seconds)"
-sleep 50
+sleep 70
 
 # TODO: automated assert that it increases to 2 instances
 # custom actuator info page?
